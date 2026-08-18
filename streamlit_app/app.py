@@ -244,6 +244,26 @@ def load_geojson():
     return geo
 
 
+def render_table(d: pd.DataFrame, align: str = "center"):
+    """st.dataframe'in interaktif (canvas tabanlı) bileşeni sayısal sütunları her zaman
+    sağa hizalar ve column_config ile bu değiştirilemez. Bu yüzden tam hizalama kontrolü
+    için düz bir HTML tablosu render ediyoruz — tüm sütunlar (metin dahil) ortalanır.
+    !important gerekli çünkü pandas.to_html() başlık satırına "text-align: right"
+    inline stilini otomatik ekliyor ve bu, sınıf tabanlı CSS'i normalde ezer."""
+    html = d.to_html(index=False, escape=False, classes="ozel-tablo", border=0)
+    st.markdown(f"""
+    <style>
+    .ozel-tablo {{ width:100%; border-collapse:collapse; font-size:14px; margin-bottom:0.5rem; }}
+    .ozel-tablo th {{ background:#1B2A4A !important; color:#FFFFFF !important; padding:8px 10px;
+                       text-align:{align} !important; font-weight:600; }}
+    .ozel-tablo td {{ padding:7px 10px; text-align:{align} !important;
+                       border-bottom:1px solid rgba(128,128,128,0.25); }}
+    .ozel-tablo tr:nth-child(even) td {{ background: rgba(128,128,128,0.06); }}
+    </style>
+    {html}
+    """, unsafe_allow_html=True)
+
+
 df = load_data()
 model, feats, kod_map = load_lgbm()
 grup_to_kod = {v: k for k, v in kod_map.items()}
@@ -317,6 +337,12 @@ if len(df_h_bolge):
     rate_label = "100binde vaka" if lang == "tr" else "cases per 100k"
     st.sidebar.metric(en_riskli_baslik, en_riskli["il"])
     st.sidebar.caption(f"{rate_label}: **{en_riskli['vaka_100bin']:.2f}**")
+    ipucu = ("ℹ️ Seçili *hastalık grubu* ve *bölge* filtresine göre hesaplanır; "
+             "yukarıdaki **İl seçin** kutusundan bağımsızdır."
+             if lang == "tr" else
+             "ℹ️ Calculated from the selected *disease group* and *region* filter; "
+             "independent of the **Select province** box above.")
+    st.sidebar.caption(ipucu)
 else:
     st.sidebar.metric(en_riskli_baslik, "—")
 
@@ -449,18 +475,14 @@ with tab2:
     tablo_df.index = tablo_df.index + 1
 
     tahmini_vaka_label = "Tahmini vaka sayısı" if lang == "tr" else "Estimated case count"
-    st.dataframe(
-        tablo_df,
-        use_container_width=True,
-        column_config={
-            "il": st.column_config.TextColumn(T["province"].capitalize()),
-            T["region"]: st.column_config.TextColumn(T["region"].capitalize()),
-            "vaka_100bin": st.column_config.NumberColumn(
-                T["rate"].capitalize(), format="%.2f"),
-            "tahmini_vaka_sayisi": st.column_config.NumberColumn(
-                tahmini_vaka_label, format="%d"),
-        },
-    )
+    tablo_goster = tablo_df.rename(columns={
+        "il": T["province"].capitalize(),
+        "vaka_100bin": T["rate"].capitalize(),
+        "tahmini_vaka_sayisi": tahmini_vaka_label,
+    }).copy()
+    tablo_goster[T["rate"].capitalize()] = tablo_goster[T["rate"].capitalize()].map(lambda x: f"{x:.2f}")
+    tablo_goster[tahmini_vaka_label] = tablo_goster[tahmini_vaka_label].map(lambda x: f"{x:,.0f}")
+    render_table(tablo_goster)
 
     st.download_button(
         T["download_csv"],
@@ -570,16 +592,10 @@ with tab3:
     cmp_disp = cmp_disp.reset_index(drop=True)
     cmp_disp.index = cmp_disp.index + 1
     hastalik_grubu_baslik = "Hastalık grubu" if lang == "tr" else "Disease group"
-    st.dataframe(
-        cmp_disp,
-        use_container_width=True,
-        column_config={
-            "hastalik_grubu": st.column_config.TextColumn(hastalik_grubu_baslik),
-            "model": st.column_config.TextColumn("Model"),
-            "RMSE": st.column_config.NumberColumn("RMSE", format="%.3f"),
-            "MAE": st.column_config.NumberColumn("MAE", format="%.3f"),
-        },
-    )
+    cmp_goster = cmp_disp.rename(columns={"hastalik_grubu": hastalik_grubu_baslik, "model": "Model"}).copy()
+    cmp_goster["RMSE"] = cmp_goster["RMSE"].map(lambda x: f"{x:.3f}")
+    cmp_goster["MAE"] = cmp_goster["MAE"].map(lambda x: f"{x:.3f}")
+    render_table(cmp_goster)
     st.caption(T["model_comparison_caption"])
 
     with st.expander(T["shap_expander"]):
@@ -621,13 +637,12 @@ with tab4:
     }
     ornek_df["kaynak"] = ornek_df["kaynak"].map(kaynak_etiketleri).fillna(ornek_df["kaynak"])
 
-    st.dataframe(
-        ornek_df,
-        use_container_width=True,
-        column_config={
-            "il": st.column_config.TextColumn(T["province"].capitalize()),
-            "tarih": st.column_config.DateColumn(T["date"].capitalize(), format="DD.MM.YYYY"),
-            "vaka_100bin": st.column_config.NumberColumn(T["rate"].capitalize(), format="%.2f"),
-            "kaynak": st.column_config.TextColumn("Kaynak" if lang == "tr" else "Source"),
-        },
-    )
+    ornek_goster = ornek_df.rename(columns={
+        "il": T["province"].capitalize(),
+        "tarih": T["date"].capitalize(),
+        "vaka_100bin": T["rate"].capitalize(),
+        "kaynak": "Kaynak" if lang == "tr" else "Source",
+    }).copy()
+    ornek_goster[T["date"].capitalize()] = ornek_goster[T["date"].capitalize()].dt.strftime("%d.%m.%Y")
+    ornek_goster[T["rate"].capitalize()] = ornek_goster[T["rate"].capitalize()].map(lambda x: f"{x:.2f}")
+    render_table(ornek_goster)

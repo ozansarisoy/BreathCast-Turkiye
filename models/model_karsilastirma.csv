@@ -1,0 +1,12 @@
+hastalik_grubu,model,RMSE,MAE
+Alt Solunum Yolu/Pnömoni,SARIMA,0.078,0.056
+Alt Solunum Yolu/Pnömoni,Prophet,0.075,0.061
+COVID-19,SARIMA,2.737,2.265
+COVID-19,Prophet,4.38,3.818
+Grip/ILI,SARIMA,0.091,0.074
+Grip/ILI,Prophet,0.13,0.112
+Tüberküloz,SARIMA,0.018,0.015
+Tüberküloz,Prophet,0.012,0.01
+ÜSYE,SARIMA,0.17,0.153
+ÜSYE,Prophet,0.168,0.139
+TÜMÜ (havuzlanmış),LightGBM,1.483,0.307

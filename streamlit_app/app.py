@@ -251,8 +251,16 @@ grup_to_kod = {v: k for k, v in kod_map.items()}
 # ============================================================
 # SIDEBAR — DİL TOGGLE + FİLTRELER
 # ============================================================
-lang_choice = st.sidebar.radio("🌐 Dil / Language", ["🇹🇷 Türkçe", "🇬🇧 English"], horizontal=True)
-lang = "en" if "English" in lang_choice else "tr"
+col_flag1, col_toggle, col_flag2 = st.sidebar.columns([1, 2, 1])
+with col_flag1:
+    st.markdown("<div style='font-size:22px; text-align:center; padding-top:4px;'>🇹🇷</div>",
+                unsafe_allow_html=True)
+with col_toggle:
+    is_english = st.toggle("dil_toggle", value=False, label_visibility="collapsed", key="lang_toggle")
+with col_flag2:
+    st.markdown("<div style='font-size:22px; text-align:center; padding-top:4px;'>🇬🇧</div>",
+                unsafe_allow_html=True)
+lang = "en" if is_english else "tr"
 T = TEXTS[lang]
 
 st.title(T["title"])
@@ -265,21 +273,24 @@ secili_hastalik_disp = st.sidebar.selectbox(
     T["disease_group"], list(hastalik_display.keys()),
     index=list(hastalik_display.keys()).index(disease_label("ÜSYE", lang))
     if disease_label("ÜSYE", lang) in hastalik_display else 0,
+    key="disease_select",
 )
 secili_hastalik = hastalik_display[secili_hastalik_disp]
 
 il_listesi = sorted(df["il"].unique())
 secili_il = st.sidebar.selectbox(T["select_province"], il_listesi,
-                                   index=il_listesi.index("İstanbul"))
+                                   index=il_listesi.index("İstanbul"), key="province_select")
 
 tarih_min, tarih_max = df["tarih"].min(), df["tarih"].max()
 tarih_araligi = st.sidebar.date_input(T["date_range"], [tarih_min, tarih_max],
-                                        min_value=tarih_min, max_value=tarih_max)
+                                        min_value=tarih_min, max_value=tarih_max,
+                                        key="date_range_select")
 
 bolge_listesi = sorted(df["bolge"].unique())
 bolge_display_map = {region_label(b, lang): b for b in bolge_listesi}
 secili_bolge_disp = st.sidebar.multiselect(T["region_map"], list(bolge_display_map.keys()),
-                                             default=list(bolge_display_map.keys()))
+                                             default=list(bolge_display_map.keys()),
+                                             key="region_multiselect")
 bolge_secim = [bolge_display_map[b] for b in secili_bolge_disp]
 
 df_h = df[df["hastalik_grubu"] == secili_hastalik]
@@ -287,6 +298,53 @@ il_df = df_h[df_h["il"] == secili_il].copy()
 if len(tarih_araligi) == 2:
     il_df = il_df[(il_df["tarih"] >= pd.Timestamp(tarih_araligi[0])) &
                   (il_df["tarih"] <= pd.Timestamp(tarih_araligi[1]))]
+
+# ---- Ek sidebar özellikleri ----
+st.sidebar.divider()
+
+son_tarih_genel = df_h["tarih"].max()
+en_riskli = df_h[df_h["tarih"] == son_tarih_genel].nlargest(1, "vaka_100bin").iloc[0]
+en_riskli_baslik = "En riskli il (bu hafta)" if lang == "tr" else "Highest-risk province (this week)"
+st.sidebar.metric(en_riskli_baslik, en_riskli["il"], f"{en_riskli['vaka_100bin']:.2f}")
+
+esik_baslik = "Uyarı eşiği (100binde vaka)" if lang == "tr" else "Alert threshold (per 100k)"
+esik_deger = st.sidebar.slider(esik_baslik, 0.0, float(df_h["vaka_100bin"].max()),
+                                 float(df_h["vaka_100bin"].quantile(0.9)), step=0.1,
+                                 key="threshold_slider")
+son_deger_secili_il = il_df["vaka_100bin"].iloc[-1] if len(il_df) else 0
+if son_deger_secili_il >= esik_deger:
+    uyari_msg = (f"⚠️ {secili_il}, eşiğin üzerinde ({son_deger_secili_il:.2f} ≥ {esik_deger:.2f})"
+                 if lang == "tr" else
+                 f"⚠️ {secili_il} is above the threshold ({son_deger_secili_il:.2f} ≥ {esik_deger:.2f})")
+    st.sidebar.warning(uyari_msg)
+else:
+    tamam_msg = (f"✅ {secili_il}, eşiğin altında" if lang == "tr"
+                 else f"✅ {secili_il} is below the threshold")
+    st.sidebar.success(tamam_msg)
+
+st.sidebar.divider()
+if st.sidebar.button("🔄 " + ("Filtreleri sıfırla" if lang == "tr" else "Reset filters")):
+    for k in ["disease_select", "province_select", "date_range_select",
+              "region_multiselect", "threshold_slider"]:
+        if k in st.session_state:
+            del st.session_state[k]
+    st.rerun()
+
+with st.sidebar.expander("ℹ️ " + ("Hakkında" if lang == "tr" else "About")):
+    if lang == "tr":
+        st.markdown(
+            "**BreathCast Türkiye**\n\n"
+            "Veri Bilimi bitirme projesi — Türkiye'de il bazlı solunum yolu ve "
+            "bulaşıcı hastalık sürveyansı ve tahminlemesi.\n\n"
+            "[GitHub reposu](https://github.com/ozansarisoy/BreathCast-Turkiye)"
+        )
+    else:
+        st.markdown(
+            "**BreathCast Turkey**\n\n"
+            "A data science capstone project — province-level respiratory & "
+            "infectious disease surveillance and forecasting for Turkey.\n\n"
+            "[GitHub repository](https://github.com/ozansarisoy/BreathCast-Turkiye)"
+        )
 
 tab1, tab2, tab3, tab4 = st.tabs([T["tab_overview"], T["tab_geo"], T["tab_forecast"], T["tab_methodology"]])
 

@@ -659,9 +659,17 @@ with tab_ozet:
 
     c1, c2, c3 = st.columns(3)
     c1.metric(T["selected_province"], secili_il)
-    c2.metric(T["last_week_rate"], f"{il_df['vaka_100bin'].iloc[-1]:.1f}")
-    degisim = il_df['vaka_100bin'].iloc[-1] - il_df['vaka_100bin'].iloc[-5]
-    c3.metric(T["change_4w"], f"{degisim:+.1f}")
+    if len(il_df) == 0:
+        bos_uyari = ("Seçili tarih aralığında veri bulunamadı." if lang == "tr"
+                     else "No data found in the selected date range.")
+        st.warning(bos_uyari)
+    else:
+        c2.metric(T["last_week_rate"], f"{il_df['vaka_100bin'].iloc[-1]:.1f}")
+        # Tarih aralığı 4 haftadan kısa seçilirse iloc[-5] index hatası verir —
+        # bu durumda değişim, elimizdeki en eski değere göre hesaplanır.
+        degisim = (il_df['vaka_100bin'].iloc[-1] - il_df['vaka_100bin'].iloc[-5]
+                   if len(il_df) > 4 else il_df['vaka_100bin'].iloc[-1] - il_df['vaka_100bin'].iloc[0])
+        c3.metric(T["change_4w"], f"{degisim:+.1f}")
 
     fig = px.line(il_df, x="tarih", y="vaka_100bin",
                    title=f"{secili_il} — {secili_hastalik_disp} {T['weekly_rate_title']}",

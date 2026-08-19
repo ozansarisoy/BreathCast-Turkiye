@@ -6,7 +6,6 @@ lag ve rolling özellikleri üretir. Çıktı: data/processed/model_ready.parque
 """
 
 import pandas as pd
-import numpy as np
 from pathlib import Path
 
 RAW_DIR = Path(__file__).resolve().parents[1] / "data" / "raw"

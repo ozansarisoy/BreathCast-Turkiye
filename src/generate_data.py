@@ -16,7 +16,7 @@ sürekli bir açık veri/CSV/API olarak yayımlamadı. Ancak GERÇEK ulusal/il b
   - COVID-19: basın açıklamalı il-bazlı insidans haritaları (1 Nis 2020,
     12 Eyl 2020, 24-30 Nis 2021, 8-14 Oca 2022)
   - Tüberküloz: Sağlık Bakanlığı Verem Savaşı Dairesi Başkanlığı'nın yıllık
-    ulusal insidans serisi — 2005: 100binde 29.4 → 2018: 14.1 → 2020: 10.6 →
+    ulusal insidans serisi — 2005: 100.000'de 29.4 → 2018: 14.1 → 2020: 10.6 →
     2022: 11 → 2024: 10.4 (kaynak: hsgm.saglik.gov.tr Verem Savaşı Raporları)
   - Grip/ÜSYE/ASYE: WHO/ECDC'nin bilinen Kuzey Yarımküre solunum yolu
     enfeksiyonu mevsimsellik paterni (Ekim-Mart artış, Haziran-Ağustos düşüş)
@@ -39,7 +39,7 @@ RNG = np.random.default_rng(42)
 RAW_DIR = Path(__file__).resolve().parents[1] / "data" / "raw"
 PROCESSED_DIR = Path(__file__).resolve().parents[1] / "data" / "processed"
 
-# ---- Gerçek çapa noktaları: (tarih, il, hastalik_grubu, 100binde haftalık vaka) ----
+# ---- Gerçek çapa noktaları: (tarih, il, hastalik_grubu, 100.000'de haftalık vaka) ----
 ANCHORS = [
     # COVID-19 — basın açıklamalı il-bazlı insidans haritaları
     ("2020-09-12", "İstanbul", "COVID-19", 45.0), ("2020-09-12", "Ankara", "COVID-19", 28.0),
@@ -57,7 +57,7 @@ ANCHORS = [
 ]
 
 HASTALIK_GRUPLARI = {
-    # ad: (yıllık taban 100binde vaka, mevsimsellik_gucu 0-1, il_yogunluk_hassasiyeti)
+    # ad: (yıllık taban 100.000'de vaka, mevsimsellik_gucu 0-1, il_yogunluk_hassasiyeti)
     "COVID-19":            dict(taban=18.0, mevsim_gucu=1.0, yogunluk_hassasiyet=1.0, pandemi_etkisi=True),
     "Grip/ILI":            dict(taban=55.0, mevsim_gucu=1.35, yogunluk_hassasiyet=0.6, pandemi_etkisi=False),
     "ÜSYE":                dict(taban=140.0, mevsim_gucu=0.9, yogunluk_hassasiyet=0.4, pandemi_etkisi=False),
@@ -116,7 +116,7 @@ def main():
         for _, il_row in pop.iterrows():
             il = il_row["il"]
             yogunluk_etki = 1.0 + (yogunluk_carpani(il_row["yogunluk_kategori"]) - 1.0) * params["yogunluk_hassasiyet"]
-            base_rate_haftalik = params["taban"] / 52.0  # yıllık 100binde taban -> haftalık ortalama
+            base_rate_haftalik = params["taban"] / 52.0  # yıllık 100.000'de taban -> haftalık ortalama
             il_noise_scale = RNG.uniform(0.12, 0.28)
             for w in weeks:
                 m = mevsim_carpani_ayarli(w, params["mevsim_gucu"])
@@ -145,18 +145,18 @@ def main():
                 idxs = hedef_hafta[hedef_hafta["il"] == il_adi].index
                 if len(idxs):
                     df.loc[idxs[0], "vaka_100bin"] = deger / 52.0  # yıllık->haftalık gerçek çapa (rate ile tutarlı ölçek)
-                    df.loc[idxs[0], "kaynak"] = "gercek_ceapa"
+                    df.loc[idxs[0], "kaynak"] = "gercek_capa"
             continue
         mask = (df["il"] == il) & (df["hastalik_grubu"] == grup) & \
                (df["tarih"] == pd.Timestamp(tarih).date().isoformat())
         if mask.any():
             df.loc[mask, "vaka_100bin"] = deger
-            df.loc[mask, "kaynak"] = "gercek_ceapa"
+            df.loc[mask, "kaynak"] = "gercek_capa"
         else:
             alt_df = df[(df["il"] == il) & (df["hastalik_grubu"] == grup)]
             nearest = (pd.to_datetime(alt_df["tarih"]) - pd.Timestamp(tarih)).abs().idxmin()
             df.loc[nearest, "vaka_100bin"] = deger
-            df.loc[nearest, "kaynak"] = "gercek_ceapa"
+            df.loc[nearest, "kaynak"] = "gercek_capa"
 
     out_path = RAW_DIR / "il_bazli_solunum_haftalik.csv"
     df.to_csv(out_path, index=False, encoding="utf-8-sig")

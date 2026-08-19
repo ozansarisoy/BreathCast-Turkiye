@@ -98,6 +98,22 @@ yeniden çalıştırılarak tüm pipeline gerçek veriyle yeniden üretilebilir.
 """,
         "province": "il", "region": "bölge", "rate": "100binde vaka", "date": "tarih",
         "season_order": ["Kış", "İlkbahar", "Yaz", "Sonbahar"],
+        "tab_summary": "🎯 Özet",
+        "summary_header": "Türkiye Geneli Durum Özeti",
+        "summary_national_avg": "Ulusal ortalama (nüfus ağırlıklı)",
+        "summary_trend_4w": "4 haftalık değişim",
+        "summary_top_province": "En yüksek il",
+        "summary_above_threshold": "90. yüzdelik üstündeki il sayısı",
+        "summary_trend_chart": "Son 26 hafta — ulusal ortalama trend",
+        "summary_by_disease": "Hastalık grubu bazında son hafta karşılaştırması",
+        "summary_anomalies": "⚠️ Bu hafta anormal artış gösteren iller",
+        "summary_anomalies_desc": ("Z-skoru ≥ 2 olan iller — son 12 haftalık ortalama ve standart "
+                    "sapmaya göre beklenenden istatistiksel olarak anlamlı derecede yüksek"),
+        "summary_no_anomaly": "Bu hafta eşiği aşan anormal bir il tespit edilmedi.",
+        "compare_provinces": "Karşılaştırmak için ek il seçin (opsiyonel)",
+        "compare_chart_title": "İl karşılaştırması",
+        "anomaly_col": "Z-skoru",
+        "of_100": "il / 81",
     },
     "en": {
         "title": "🫁 Turkey Respiratory & Infectious Disease Surveillance Dashboard",
@@ -180,6 +196,22 @@ a CSV can be added under `data/raw/` and the pipeline (`src/clean_data.py` +
 """,
         "province": "province", "region": "region", "rate": "cases per 100k", "date": "date",
         "season_order": ["Winter", "Spring", "Summer", "Autumn"],
+        "tab_summary": "🎯 Summary",
+        "summary_header": "Turkey-Wide Status Summary",
+        "summary_national_avg": "National average (population-weighted)",
+        "summary_trend_4w": "4-week change",
+        "summary_top_province": "Highest province",
+        "summary_above_threshold": "Provinces above the 90th percentile",
+        "summary_trend_chart": "Last 26 weeks — national average trend",
+        "summary_by_disease": "Last-week comparison by disease group",
+        "summary_anomalies": "⚠️ Provinces with an abnormal spike this week",
+        "summary_anomalies_desc": ("Provinces with a z-score ≥ 2 — statistically significantly higher "
+                    "than expected based on the trailing 12-week mean and standard deviation"),
+        "summary_no_anomaly": "No abnormal province detected above the threshold this week.",
+        "compare_provinces": "Select additional provinces to compare (optional)",
+        "compare_chart_title": "Province comparison",
+        "anomaly_col": "Z-score",
+        "of_100": "provinces / 81",
     },
 }
 
@@ -392,10 +424,82 @@ with st.sidebar.expander("ℹ️ " + ("Hakkında" if lang == "tr" else "About"))
             "[GitHub repository](https://github.com/ozansarisoy/BreathCast-Turkiye)"
         )
 
-tab1, tab2, tab3, tab4 = st.tabs([T["tab_overview"], T["tab_geo"], T["tab_forecast"], T["tab_methodology"]])
+tab_ozet, tab1, tab2, tab3, tab4 = st.tabs([T["tab_summary"], T["tab_overview"], T["tab_geo"],
+                                              T["tab_forecast"], T["tab_methodology"]])
 
-# ---------------- TAB 1: Genel Bakış / Overview ----------------
-with tab1:
+# ---------------- TAB ÖZET: Executive Summary ----------------
+with tab_ozet:
+    st.subheader(T["summary_header"])
+
+    # Nüfus ağırlıklı ulusal ortalama (seçili hastalık grubu)
+    ulusal_seri = df_h.groupby("tarih").apply(
+        lambda g: np.average(g["vaka_100bin"], weights=g["nufus_2022"])
+    ).sort_index()
+
+    son_deger = ulusal_seri.iloc[-1]
+    onceki_4h = ulusal_seri.iloc[-5] if len(ulusal_seri) > 4 else ulusal_seri.iloc[0]
+    degisim_ulusal = son_deger - onceki_4h
+
+    son_hafta_tum_il = df_h[df_h["tarih"] == df_h["tarih"].max()]
+    en_yuksek_il_row = son_hafta_tum_il.nlargest(1, "vaka_100bin").iloc[0]
+    esik_90 = df_h["vaka_100bin"].quantile(0.9)
+    esik_ustu_sayi = (son_hafta_tum_il["vaka_100bin"] >= esik_90).sum()
+
+    k1, k2, k3, k4 = st.columns(4)
+    k1.metric(T["summary_national_avg"], f"{son_deger:.2f}", f"{degisim_ulusal:+.2f}")
+    k2.metric(T["summary_trend_4w"], f"{degisim_ulusal:+.2f}")
+    k3.metric(T["summary_top_province"], en_yuksek_il_row["il"], f"{en_yuksek_il_row['vaka_100bin']:.2f}")
+    k4.metric(T["summary_above_threshold"], f"{esik_ustu_sayi} / 81")
+
+    st.markdown(f"**{secili_hastalik_disp}** — {T['summary_trend_chart']}")
+    ulusal_son26 = ulusal_seri.tail(26).reset_index()
+    ulusal_son26.columns = ["tarih", "deger"]
+    fig_ulusal = px.area(ulusal_son26, x="tarih", y="deger",
+                           labels={"deger": T["rate"], "tarih": T["date"]})
+    fig_ulusal.update_traces(line_color="#D9642C", fillcolor="rgba(217,100,44,0.15)")
+    st.plotly_chart(fig_ulusal, use_container_width=True)
+
+    col_l, col_r = st.columns(2)
+    with col_l:
+        st.markdown(f"**{T['summary_by_disease']}**")
+        son_tarih_g = df["tarih"].max()
+        tum_gruplar_son = df[df["tarih"] == son_tarih_g].groupby("hastalik_grubu").apply(
+            lambda g: np.average(g["vaka_100bin"], weights=g["nufus_2022"])
+        ).reset_index()
+        tum_gruplar_son.columns = ["hastalik_grubu", "deger"]
+        tum_gruplar_son["hastalik_disp"] = tum_gruplar_son["hastalik_grubu"].apply(
+            lambda h: disease_label(h, lang))
+        fig_gruplar = px.bar(tum_gruplar_son.sort_values("deger", ascending=True),
+                               x="deger", y="hastalik_disp", orientation="h",
+                               labels={"deger": T["rate"], "hastalik_disp": ""})
+        st.plotly_chart(fig_gruplar, use_container_width=True)
+
+    with col_r:
+        st.markdown(f"**{T['summary_anomalies']}**")
+        st.caption(T["summary_anomalies_desc"])
+        # Z-skoru: son 12 haftalık il-bazlı ortalama/std'ye göre bu haftanın sapması
+        son_tarih_h = df_h["tarih"].max()
+        gecmis_12h = df_h[df_h["tarih"] < son_tarih_h].groupby("il")["vaka_100bin"].agg(
+            ort="mean", std="std").reset_index()
+        bu_hafta = df_h[df_h["tarih"] == son_tarih_h][["il", "vaka_100bin"]]
+        z_df = bu_hafta.merge(gecmis_12h, on="il", how="left")
+        z_df["std"] = z_df["std"].replace(0, np.nan)
+        z_df["z"] = (z_df["vaka_100bin"] - z_df["ort"]) / z_df["std"]
+        anomaliler = z_df[z_df["z"] >= 2].sort_values("z", ascending=False).head(10)
+        if len(anomaliler):
+            anomali_goster = anomaliler[["il", "vaka_100bin", "z"]].rename(columns={
+                "il": T["province"].capitalize(),
+                "vaka_100bin": T["rate"].capitalize(),
+                "z": T["anomaly_col"],
+            }).copy()
+            anomali_goster[T["rate"].capitalize()] = anomali_goster[T["rate"].capitalize()].map(
+                lambda x: f"{x:.2f}")
+            anomali_goster[T["anomaly_col"]] = anomali_goster[T["anomaly_col"]].map(lambda x: f"{x:.2f}")
+            render_table(anomali_goster)
+        else:
+            st.info(T["summary_no_anomaly"])
+
+
     c1, c2, c3 = st.columns(3)
     c1.metric(T["selected_province"], secili_il)
     c2.metric(T["last_week_rate"], f"{il_df['vaka_100bin'].iloc[-1]:.1f}")
@@ -408,6 +512,19 @@ with tab1:
     fig.add_scatter(x=il_df["tarih"], y=il_df["roll_mean_4"], mode="lines",
                      name=T["rolling_avg"], line=dict(dash="dash"))
     st.plotly_chart(fig, use_container_width=True)
+
+    # ---- Karşılaştırmalı il görünümü ----
+    diger_iller = [i for i in il_listesi if i != secili_il]
+    karsilastir_iller = st.multiselect(T["compare_provinces"], diger_iller, key="compare_provinces_select")
+    if karsilastir_iller:
+        karsilastir_df = df_h[df_h["il"].isin([secili_il] + karsilastir_iller)].copy()
+        if len(tarih_araligi) == 2:
+            karsilastir_df = karsilastir_df[(karsilastir_df["tarih"] >= pd.Timestamp(tarih_araligi[0])) &
+                                              (karsilastir_df["tarih"] <= pd.Timestamp(tarih_araligi[1]))]
+        fig_cmp2 = px.line(karsilastir_df, x="tarih", y="vaka_100bin", color="il",
+                             title=T["compare_chart_title"],
+                             labels={"vaka_100bin": T["rate"], "tarih": T["date"], "il": T["province"]})
+        st.plotly_chart(fig_cmp2, use_container_width=True)
 
     col_a, col_b = st.columns(2)
     with col_a:

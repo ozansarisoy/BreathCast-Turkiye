@@ -1,169 +1,175 @@
-# Turkey Respiratory & Infectious Disease Surveillance Dashboard
+# Türkiye Solunum Yolu ve Bulaşıcı Hastalık İzleme Paneli
 
-Data Science capstone project — province-level time series analysis,
-forecasting, and an interactive Streamlit dashboard for **five respiratory /
-infectious disease groups** in Turkey (not just COVID-19).
+Veri Bilimi bitirme projesi — Türkiye'de il bazlı, **beş solunum yolu/bulaşıcı
+hastalık grubunun** (yalnızca COVID-19 değil) zaman serisi analizi, tahmini ve
+interaktif Streamlit paneli.
 
-## 1. Project Overview
+## 1. Proje Özeti
 
-This project is an end-to-end data science pipeline that models the weekly
-incidence (cases per 100,000 population) of the following disease groups
-across Turkey's 81 provinces:
+Bu proje, Türkiye'nin 81 ilinde aşağıdaki hastalık gruplarının haftalık
+insidansını (100 binde vaka) modelleyen uçtan uca bir veri bilimi pipeline'ıdır:
 
 - COVID-19
-- Influenza / Influenza-Like Illness (ILI)
-- Upper Respiratory Tract Infection (URTI)
-- Lower Respiratory Tract Infection / Pneumonia (bronchitis, pneumonia)
-- Tuberculosis (TB)
+- İnfluenza / Grip benzeri hastalık (ILI)
+- Üst Solunum Yolu Enfeksiyonu (ÜSYE)
+- Alt Solunum Yolu Enfeksiyonu / Pnömoni (bronşit, zatürre)
+- Tüberküloz (verem)
 
-`data collection → cleaning → feature engineering → time series modeling →
-model comparison → Streamlit dashboard`
+`veri toplama → temizleme → özellik mühendisliği → zaman serisi modelleme →
+model karşılaştırma → Streamlit dashboard`
 
-## 2. Data & Methodology Note (IMPORTANT — always explain this in a review/defense)
+## 2. Veri ve Metodolojik Not (ÖNEMLİ — jüri sunumunda mutlaka açıklayın)
 
-Turkey's Ministry of Health has never published province-level case data as
-continuous open data for any disease group. This project works with a
-**calibrated proxy dataset**, built from TurkStat province population data +
-real anchor points + known seasonality/wave patterns:
+T.C. Sağlık Bakanlığı hiçbir hastalık grubu için il bazlı vaka verisini sürekli
+açık veri olarak yayımlamamıştır. Proje, TÜİK il nüfus verisi + gerçek
+çapa noktaları + bilinen mevsimsellik/dalga paternleri kullanılarak kalibre
+edilmiş bir **proxy veri seti** ile çalışır:
 
-| Disease group | Real anchor source |
+| Hastalık grubu | Gerçek çapa kaynağı |
 |---|---|
-| COVID-19 | Ministry of Health's press-released province-level incidence maps (Apr 1 2020, Sep 12 2020, Apr 24-30 2021, Jan 8-14 2022) |
-| Tuberculosis | TB Control Department's annual NATIONAL incidence (2020: 10.6, 2022: 11.0, 2024: 10.4 / 100k) — distributed to provinces by population/density |
-| Influenza/ILI, URTI, Lower Respiratory Tract | WHO/ECDC's known Northern Hemisphere respiratory infection seasonality pattern (winter peak, summer trough) |
+| COVID-19 | Sağlık Bakanlığı'nın il-bazlı basın açıklamalı insidans haritaları (1 Nis 2020, 12 Eyl 2020, 24-30 Nis 2021, 8-14 Oca 2022) |
+| Tüberküloz | Verem Savaşı Dairesi Başkanlığı yıllık ULUSAL insidansı (2020: 10.6, 2022: 11.0, 2024: 10.4 / 100bin) — il'e nüfus/yoğunlukla dağıtıldı |
+| Grip/ILI, ÜSYE, Alt Solunum Yolu | WHO/ECDC'nin bilinen Kuzey Yarımküre solunum yolu enfeksiyonu mevsimsellik paterni (kış zirvesi, yaz düşüşü) |
 
-This is a realistic methodological choice given the data constraint, and is
-transparently labeled in the `source` column of
-`data/raw/il_bazli_solunum_haftalik.csv` (`gercek_ceapa` / `proxy_kalibreli`
-/ `interpole` — i.e. real_anchor / calibrated_proxy / interpolated).
+Bu, veri kısıtı altında gerçekçi bir metodolojik tercihtir ve
+`data/raw/il_bazli_solunum_haftalik.csv` içindeki `kaynak` sütununda şeffaf
+şekilde etiketlenmiştir (`gercek_ceapa` / `proxy_kalibreli` / `interpole`).
 
-If real data becomes available (e.g. via an institutional request to
-TurkStat), it can be dropped into `data/raw/` using the same schema
-(`province, disease_group, date, cases_per_100k`) and the pipeline re-run.
+Gerçek veri elde edilirse (örn. bir kurumdan / TÜİK özel talep yoluyla), aynı
+şema (`il, hastalik_grubu, tarih, vaka_100bin`) korunarak `data/raw/` altına
+konup pipeline yeniden çalıştırılabilir.
 
-## 3. Folder Structure
+## 3. Klasör Yapısı
 
 ```
 turkiye-solunum-projesi/
 ├── data/
-│   ├── raw/                  # raw data (population + generated time series)
-│   └── processed/            # cleaned data with engineered features
+│   ├── raw/                  # ham veri (nüfus + üretilen zaman serisi)
+│   └── processed/            # temizlenmiş, özellik mühendisliği yapılmış veri
 ├── src/
-│   ├── generate_data.py      # proxy data generation
-│   ├── clean_data.py         # cleaning + lag/rolling features
-│   └── train_models.py       # SARIMA / Prophet / LightGBM training & comparison
-├── models/                    # trained model + comparison table
+│   ├── generate_data.py      # proxy veri üretimi
+│   ├── clean_data.py         # temizleme + lag/rolling özellikleri
+│   └── train_models.py       # SARIMA / Prophet / LightGBM eğitim ve karşılaştırma
+├── models/                    # eğitilmiş model + karşılaştırma tablosu
 ├── streamlit_app/
-│   └── app.py                 # 4-tab interactive dashboard
+│   └── app.py                 # 4 sekmeli interaktif dashboard
 ├── requirements.txt
 └── README.md
 ```
 
-## 4. Setup & Running
+## 4. Kurulum ve Çalıştırma
 
 ```bash
 python -m venv venv && source venv/bin/activate   # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 
-python src/generate_data.py     # generate raw data
-python src/clean_data.py        # clean + engineer features
-python src/train_models.py      # train models, compare, save
+python src/generate_data.py     # ham veri üret
+python src/clean_data.py        # temizle + özellik üret
+python src/train_models.py      # modelleri eğit, karşılaştır, kaydet
 
 streamlit run streamlit_app/app.py
 ```
 
-## 5. Methodology Details
+## 5. Yöntem Detayları
 
-**Feature engineering:** per province + disease group — lag_1, lag_2, lag_4,
-lag_52 (same week last year), 4-week rolling mean/std, calendar features
-(month, week, season), population, disease group code.
+**Özellik mühendisliği:** il + hastalık grubu bazında lag_1, lag_2, lag_4,
+lag_52 (geçen yıl aynı hafta), 4 haftalık hareketli ortalama/std, takvim
+özellikleri (ay, hafta, mevsim), nüfus, hastalık grubu kodu.
 
-**Models & comparison (per disease group, Turkey-wide population-weighted
-series, last-12-week test — see `models/model_karsilastirma.csv`):**
+**Modeller ve karşılaştırma (hastalık grubu bazında, Türkiye geneli nüfus
+ağırlıklı seri, son 12 hafta test — `models/model_karsilastirma.csv`):**
 
-| Disease group | SARIMA RMSE | Prophet RMSE |
+| Hastalık grubu | SARIMA RMSE | Prophet RMSE |
 |---|---|---|
 | COVID-19 | ~2.74 | ~4.38 |
-| Influenza/ILI | ~0.09 | ~0.13 |
-| URTI | ~0.17 | ~0.17 |
-| Lower Respiratory Tract/Pneumonia | ~0.078 | ~0.075 |
-| Tuberculosis | ~0.018 | ~0.012 |
+| Grip/ILI | ~0.09 | ~0.13 |
+| ÜSYE | ~0.17 | ~0.17 |
+| Alt Solunum Yolu/Pnömoni | ~0.078 | ~0.075 |
+| Tüberküloz | ~0.018 | ~0.012 |
 
-A pooled **LightGBM** model — trained jointly on all province + disease
-group combinations, with disease group added as a categorical feature:
-**RMSE ≈ 1.48, MAE ≈ 0.31** (evaluated across all groups together). This
-single model is used in the production/forecast tab because (a) sparse
-province-disease combinations can borrow strength from others, and (b) one
-model file can serve all 405 (81 provinces × 5 groups) series.
+Havuzlanmış (pooled) **LightGBM** — tüm il + hastalık grubu kombinasyonlarını
+tek modelde birlikte öğrenir, hastalık grubu kategorik değişken olarak eklenir:
+**RMSE ≈ 1.48, MAE ≈ 0.31** (tüm gruplar birlikte değerlendirildiğinde).
+Üretim/tahmin sekmesinde bu tek model kullanılır çünkü (a) az örnekli
+il-hastalık kombinasyonları diğerlerinden öğrenebilir, (b) tek bir model
+dosyasıyla 405 (81 il × 5 grup) seri yönetilebilir.
 
-**Why these three models?** SARIMA is a classic, interpretable baseline;
-Prophet offers strong seasonal decomposition with minimal tuning; LightGBM
-can jointly learn from multi-province, multi-disease data and generalize
-while incorporating exogenous features (population, calendar, disease
-group).
+**Neden bu üçü?** SARIMA klasik/yorumlanabilir baseline, Prophet mevsimsel
+trend ayrıştırması güçlü ve az parametre ayarı gerektiren pratik bir seçenek,
+LightGBM ise çoklu il+hastalık verisini ortak öğrenip genelleme yapabilen ve
+dış değişken (nüfus, takvim, hastalık grubu) ekleyebilen esnek bir yaklaşım
+olduğu için seçildi.
 
-## 6. Streamlit Dashboard Structure
+## 6. Streamlit Panel Yapısı
 
-The sidebar's **disease group** and **province** filters work together:
+Sidebar'da **hastalık grubu** ve **il** filtreleri birlikte çalışır:
 
-- **Overview:** time series + rolling average + seasonality chart for the
-  selected province+disease, plus a comparison of all 5 disease groups
-  within the same province
-- **Geographic Distribution:** last week's province/region ranking for the
-  selected disease (bar chart + table)
-- **Forecast:** LightGBM-based 1-8 week forward forecast for the selected
-  province+disease, plus a model comparison table by disease group
-- **Methodology:** transparent explanation of the data constraint and
-  calibration method for each disease group
+- **Genel Bakış:** seçili il+hastalık için zaman serisi + hareketli ortalama +
+  mevsimsellik grafiği + aynı ilde 5 hastalık grubunun karşılaştırması
+- **Coğrafi Dağılım:** seçili hastalık için son haftanın il/bölge bazlı sıralaması (bar + tablo)
+- **Tahmin:** LightGBM ile seçili il+hastalık için 1-8 haftalık ileriye dönük
+  tahmin, hastalık grubu bazında model karşılaştırma tablosu
+- **Metodoloji:** her hastalık grubu için veri kısıtı ve kalibrasyon yönteminin şeffaf açıklaması
 
-`@st.cache_data` (data) and `@st.cache_resource` (model) are used for
-performance.
+Performans için `@st.cache_data` (veri) ve `@st.cache_resource` (model) kullanıldı.
 
-## 7. Future Work Ideas (can be added to a report as "future work")
+## 7. Geliştirme Fikirleri (rapora "gelecek çalışmalar" olarak eklenebilir)
 
-- Choropleth map (geopandas + GeoJSON) if real province-level data becomes available
-- An anomaly/early-warning tab using Isolation Forest
-- Clustering provinces with similar disease profiles using K-Means
-- Adding exogenous variables such as air pollution or temperature to the model
+- Gerçek il-bazlı veri temin edilirse choropleth harita (geopandas + GeoJSON)
+- Isolation Forest ile anomali/erken uyarı sekmesi
+- K-Means ile benzer hastalık profiline sahip illerin kümelenmesi
+- Hava kirliliği / sıcaklık gibi dış değişkenlerin modele eklenmesi
 
-## 8. Deployment (Streamlit Community Cloud)
+## 8. Testler
 
-1. Push this folder to a GitHub repository (see Git steps below)
-2. Sign in with your GitHub account at https://share.streamlit.io
-3. "New app" → select repo/branch → main file path: `streamlit_app/app.py`
-4. Deploy — you'll have a live URL within a few minutes
+```bash
+pip install pytest
+pytest tests/ -v
+```
+
+`tests/` klasörü, `src/generate_data.py` ve `src/clean_data.py` içindeki temel
+fonksiyonlar için 22 birim testi içerir (mevsimsellik, yoğunluk çarpanları,
+veri temizleme, lag özellikleri, nüfus birleştirme vb.). Bu testler bir kez
+gerçek bir hatayı da yakaladı: `mevsim_carpani_ayarli()` yüksek mevsimsellik
+gücü (gucu) değerlerinde teorik olarak negatif çarpan üretebiliyordu — testler
+bunu bulup düzeltilmesini sağladı (bkz. Bölüm 10).
+
+## 9. Deployment (Streamlit Community Cloud)
+
+1. Bu klasörü GitHub reposu olarak push edin (bkz. aşağıdaki Git adımları)
+2. https://share.streamlit.io adresinde GitHub hesabınızla giriş yapın
+3. "New app" → repo/branch seçin → main file path: `streamlit_app/app.py`
+4. Deploy — birkaç dakika içinde canlı URL alırsınız
 
 ```bash
 git init
 git add .
-git commit -m "Turkey respiratory disease surveillance dashboard - initial release"
+git commit -m "Türkiye solunum yolu enfeksiyon izleme paneli - ilk sürüm"
 git branch -M main
-git remote add origin <YOUR_GITHUB_REPO_URL>
+git remote add origin <SENIN_GITHUB_REPO_URL>
 git push -u origin main
 ```
 
-## 9. Limitations
+## 9. Sınırlılıklar
 
-- Since the data is proxy/calibrated, absolute numbers should not be
-  presented as real epidemiological figures — treat them as a methodology
-  demonstration only.
-- LightGBM forecasts are more reliable over short horizons (1-4 weeks);
-  error accumulates as the horizon grows (due to the recursive forecasting
-  structure).
-- This proxy data mimics "reported/registered case" style rates; the true
-  epidemiological incidence of conditions like URTI, which are very common
-  in the population but rarely reported to a health facility, could be
-  substantially higher (tens of thousands per 100k). The model reflects
-  the surveillance/reporting scale, not total community incidence.
+- Veri proxy/kalibreli olduğu için mutlak sayılar gerçek epidemiyolojik
+  değerler olarak sunulmamalı, yalnızca metodolojik gösterim amaçlı kabul
+  edilmelidir.
+- LightGBM tahminleri kısa ufuklarda (1-4 hafta) daha güvenilirdir; ufuk
+  uzadıkça hata birikimi artar (özyinelemeli tahmin yapısı nedeniyle).
+- Bu proxy veri "bildirilen/kayıtlı vaka" tarzı oranları taklit eder; ÜSYE gibi
+  toplumda çok sık görülen ama nadiren sağlık kuruluşuna bildirilen
+  hastalıkların gerçek epidemiyolojik insidansı (yüz binde on binler) çok
+  daha yüksek olabilir. Model, sürveyans/bildirim ölçeğini yansıtır.
 
-## 10. Known Fix Log
+## 10. Bilinen Düzeltme Kaydı
 
-The initial version had a unit-conversion bug in `src/generate_data.py`: the
-`taban` (baseline) value was defined as "annual cases per 100k" but was
-divided by 12 instead of 52 when converting to a weekly rate (monthly
-scale), inflating rates by ~4x for all proxy weeks outside the real anchor
-points. The same bug also affected how tuberculosis's annual national value
-was anchored to a single week. Both were fixed to divide by 52, and the
-full pipeline (`generate_data.py → clean_data.py → train_models.py`) was
-re-run and re-validated — all numbers in this README reflect the corrected
-version.
+İlk sürümde `src/generate_data.py` içinde bir birim dönüştürme hatası vardı:
+`taban` değeri "yıllık 100binde vaka" olarak tanımlanmıştı ancak haftalık
+orana çevrilirken 52 yerine 12'ye bölünüyordu (aylık ölçek), bu da
+gerçek çapa noktaları dışındaki tüm proxy haftalarda oranları ~4 kat
+şişiriyordu. Aynı hata, tüberküloz için ulusal yıllık değerin tek bir haftaya
+çapalanmasında da vardı. Her ikisi de 52'ye bölünecek şekilde düzeltildi ve
+tüm pipeline (`generate_data.py → clean_data.py → train_models.py`) yeniden
+çalıştırılıp doğrulandı — bu README'deki tüm sayılar düzeltilmiş sürümü
+yansıtır.

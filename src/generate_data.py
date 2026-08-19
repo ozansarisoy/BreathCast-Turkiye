@@ -100,9 +100,11 @@ def pandemi_dalga_carpani(hafta_tarihi: pd.Timestamp) -> float:
 
 def mevsim_carpani_ayarli(hafta_tarihi, gucu: float) -> float:
     """mevsim_carpani'ni 0-1 arası bir 'güç' katsayısıyla yumuşatır/güçlendirir.
-    gucu=1 -> orijinal mevsimsellik, gucu<1 -> daha düz (TB gibi az mevsimsel), gucu>1 -> daha keskin (grip)."""
+    gucu=1 -> orijinal mevsimsellik, gucu<1 -> daha düz (TB gibi az mevsimsel), gucu>1 -> daha keskin (grip).
+    Not: gucu > ~1.4 olduğunda (base - 1.0) * gucu teorik olarak -1'den küçük çıkabilir,
+    bu da negatif bir çarpana yol açar — vaka oranı asla negatif olamayacağı için 0'da sınırlanır."""
     base = mevsim_carpani(hafta_tarihi)
-    return 1.0 + (base - 1.0) * gucu
+    return max(0.0, 1.0 + (base - 1.0) * gucu)
 
 
 def main():

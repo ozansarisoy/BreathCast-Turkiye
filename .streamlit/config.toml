@@ -1,0 +1,13 @@
+[theme]
+# BreathCast Türkiye marka paleti (pptx sunumuyla tutarlı)
+primaryColor = "#D9642C"
+backgroundColor = "#0E1117"
+secondaryBackgroundColor = "#1B2A4A"
+textColor = "#E6E9EF"
+font = "sans serif"
+
+[browser]
+gatherUsageStats = false
+
+[server]
+headless = true

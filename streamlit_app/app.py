@@ -244,6 +244,14 @@ REGION_LABELS_EN = {
     "Doğu Anadolu": "Eastern Anatolia", "Güneydoğu Anadolu": "Southeastern Anatolia",
 }
 SEASON_LABELS_EN = {"Kış": "Winter", "İlkbahar": "Spring", "Yaz": "Summer", "Sonbahar": "Autumn"}
+# İngilizce metinde uluslararası olarak yaygın kullanılan iki istisna (noktasız 'I'):
+# diğer 79 il ismi İngilizce'de de Türkçe yazımıyla (aksan/nokta dahil) kullanılır,
+# bu yüzden yalnızca bu ikisi çevrilir — geri kalanı olduğu gibi bırakılır.
+PROVINCE_LABELS_EN = {"İstanbul": "Istanbul", "İzmir": "Izmir"}
+
+
+def province_label(name, lang):
+    return PROVINCE_LABELS_EN.get(name, name) if lang == "en" else name
 
 
 def disease_label(name, lang):
@@ -468,9 +476,16 @@ secili_hastalik = hastalik_display[secili_hastalik_disp]
 
 # İl isimleri her zaman Türkçe kalır (çevrilmez), bu yüzden dilden bağımsız
 # olarak her zaman doğru Türkçe alfabetik sırayla (turkce_anahtar) sıralanır.
+# Görünen etiket (secili_il_disp) ile veri filtrelemede kullanılan gerçek/kanonik
+# isim (secili_il) ayrıştırılır — İngilizce modda "İstanbul"/"İzmir" kullanıcıya
+# "Istanbul"/"Izmir" olarak gösterilir, ama veri her zaman "İstanbul" ile eşleşir.
 il_listesi = sorted(df["il"].unique(), key=turkce_anahtar)
-secili_il = st.sidebar.selectbox(T["select_province"], il_listesi,
-                                   index=il_listesi.index("İstanbul"), key="province_select")
+il_display = {province_label(i, lang): i for i in il_listesi}
+il_anahtarlar = list(il_display.keys())
+secili_il_disp = st.sidebar.selectbox(
+    T["select_province"], il_anahtarlar,
+    index=il_anahtarlar.index(province_label("İstanbul", lang)), key="province_select")
+secili_il = il_display[secili_il_disp]
 
 tarih_min, tarih_max = df["tarih"].min(), df["tarih"].max()
 tarih_araligi = st.sidebar.date_input(T["date_range"], [tarih_min, tarih_max],
@@ -527,13 +542,13 @@ esik_deger = st.sidebar.slider(esik_baslik, 0.0, esik_max, esik_varsayilan, step
                                  key=f"threshold_slider_{secili_hastalik}")
 son_deger_secili_il = il_df["vaka_100bin"].iloc[-1] if len(il_df) else 0
 if son_deger_secili_il >= esik_deger:
-    uyari_msg = (f"⚠️ {secili_il}, eşiğin üzerinde ({son_deger_secili_il:.2f} ≥ {esik_deger:.2f})"
+    uyari_msg = (f"⚠️ {secili_il_disp}, eşiğin üzerinde ({son_deger_secili_il:.2f} ≥ {esik_deger:.2f})"
                  if lang == "tr" else
-                 f"⚠️ {secili_il} is above the threshold ({son_deger_secili_il:.2f} ≥ {esik_deger:.2f})")
+                 f"⚠️ {secili_il_disp} is above the threshold ({son_deger_secili_il:.2f} ≥ {esik_deger:.2f})")
     st.sidebar.warning(uyari_msg)
 else:
-    tamam_msg = (f"✅ {secili_il}, eşiğin altında" if lang == "tr"
-                 else f"✅ {secili_il} is below the threshold")
+    tamam_msg = (f"✅ {secili_il_disp}, eşiğin altında" if lang == "tr"
+                 else f"✅ {secili_il_disp} is below the threshold")
     st.sidebar.success(tamam_msg)
 
 st.sidebar.divider()
@@ -657,8 +672,10 @@ with tab_ozet:
         st.caption(f"ℹ️ {rozet}")
 
 
+# ---------------- TAB 1: Genel Bakış / Overview ----------------
+with tab1:
     c1, c2, c3 = st.columns(3)
-    c1.metric(T["selected_province"], secili_il)
+    c1.metric(T["selected_province"], secili_il_disp)
     if len(il_df) == 0:
         bos_uyari = ("Seçili tarih aralığında veri bulunamadı." if lang == "tr"
                      else "No data found in the selected date range.")
@@ -672,15 +689,19 @@ with tab_ozet:
         c3.metric(T["change_4w"], f"{degisim:+.1f}")
 
     fig = px.line(il_df, x="tarih", y="vaka_100bin",
-                   title=f"{secili_il} — {secili_hastalik_disp} {T['weekly_rate_title']}",
+                   title=f"{secili_il_disp} — {secili_hastalik_disp} {T['weekly_rate_title']}",
                    labels={"vaka_100bin": T["rate"], "tarih": T["date"]})
     fig.add_scatter(x=il_df["tarih"], y=il_df["roll_mean_4"], mode="lines",
                      name=T["rolling_avg"], line=dict(dash="dash"))
     st.plotly_chart(fig, use_container_width=True)
 
     # ---- Karşılaştırmalı il görünümü ----
-    diger_iller = [i for i in il_listesi if i != secili_il]
-    karsilastir_iller = st.multiselect(T["compare_provinces"], diger_iller, key="compare_provinces_select")
+    # Multiselect'te de görüntü etiketleri (İngilizce modda Istanbul/Izmir) kullanılır,
+    # seçim geri kanonik isimlere çevrilir.
+    diger_il_display = {province_label(i, lang): i for i in il_listesi if i != secili_il}
+    karsilastir_secim_disp = st.multiselect(T["compare_provinces"], list(diger_il_display.keys()),
+                                              key="compare_provinces_select")
+    karsilastir_iller = [diger_il_display[k] for k in karsilastir_secim_disp]
     if karsilastir_iller:
         karsilastir_df = df_h[df_h["il"].isin([secili_il] + karsilastir_iller)].copy()
         if len(tarih_araligi) == 2:
@@ -708,14 +729,14 @@ with tab_ozet:
         fig_radar = go.Figure()
         fig_radar.add_trace(go.Scatterpolar(
             r=radar_data.values, theta=radar_labels, fill="toself",
-            name=secili_il, line_color="#0F6E6E",
+            name=secili_il_disp, line_color="#0F6E6E",
         ))
         fig_radar.update_layout(polar=dict(radialaxis=dict(visible=True)),
                                   showlegend=False, height=350,
                                   margin=dict(l=40, r=40, t=20, b=20))
         st.plotly_chart(fig_radar, use_container_width=True)
 
-    st.subheader(f"{secili_il} {T['disease_compare']}")
+    st.subheader(f"{secili_il_disp} {T['disease_compare']}")
     tum_gruplar_il = df[df["il"] == secili_il].copy()
     tum_gruplar_il["hastalik_grubu_disp"] = tum_gruplar_il["hastalik_grubu"].apply(lambda h: disease_label(h, lang))
     fig_cmp = px.line(tum_gruplar_il, x="tarih", y="vaka_100bin", color="hastalik_grubu_disp",
@@ -833,7 +854,7 @@ with tab2:
 
 # ---------------- TAB 3: Tahmin / Forecast ----------------
 with tab3:
-    st.subheader(f"{secili_il} {T['forecast_subheader']} {secili_hastalik_disp}")
+    st.subheader(f"{secili_il_disp} {T['forecast_subheader']} {secili_hastalik_disp}")
     ufuk = st.slider(T["forecast_horizon"], 1, 8, 4)
     grup_kod = grup_to_kod[secili_hastalik]
 
@@ -863,7 +884,7 @@ with tab3:
     gecmis["tip"] = T["actual"]
     birlesik = pd.concat([gecmis, pd.DataFrame(tahminler)], ignore_index=True)
     fig3 = px.line(birlesik, x="tarih", y="vaka_100bin", color="tip",
-                    title=f"{secili_il} — {T['forecast_chart_title'].format(n=ufuk)}",
+                    title=f"{secili_il_disp} — {T['forecast_chart_title'].format(n=ufuk)}",
                     labels={"vaka_100bin": T["rate"], "tarih": T["date"], "tip": ""})
     st.plotly_chart(fig3, use_container_width=True)
 

@@ -303,14 +303,19 @@ grup_to_kod = {v: k for k, v in kod_map.items()}
 # ============================================================
 # SIDEBAR — DİL TOGGLE + FİLTRELER
 # ============================================================
-col_flag1, col_toggle, col_flag2 = st.sidebar.columns([1, 2, 1])
+# Ortadaki üç dar kolonu (TR - toggle - EN) birbirine yakın tutmak için
+# sağa ve sola geniş "boşluk" (spacer) kolonu eklenir — Streamlit kolonları
+# satırın tamamını doldurduğu için dar oranlı kolonlar bile aralarında
+# büyük boşluk bırakabilir; spacer'lar bu boşluğu kenarlara iter.
+_, col_flag1, col_toggle, col_flag2, _ = st.sidebar.columns(
+    [2, 1, 1.3, 1, 2], gap="small")
 with col_flag1:
-    st.markdown("<div style='font-weight:700; text-align:center; padding-top:6px; opacity:0.85;'>TR</div>",
+    st.markdown("<div style='font-weight:700; text-align:right; padding-top:6px; opacity:0.85;'>TR</div>",
                 unsafe_allow_html=True)
 with col_toggle:
     is_english = st.toggle("dil_toggle", value=False, label_visibility="collapsed", key="lang_toggle")
 with col_flag2:
-    st.markdown("<div style='font-weight:700; text-align:center; padding-top:6px; opacity:0.85;'>EN</div>",
+    st.markdown("<div style='font-weight:700; text-align:left; padding-top:6px; opacity:0.85;'>EN</div>",
                 unsafe_allow_html=True)
 lang = "en" if is_english else "tr"
 T = TEXTS[lang]

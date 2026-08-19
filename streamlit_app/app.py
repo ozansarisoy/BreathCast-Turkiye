@@ -259,6 +259,42 @@ def season_label(name, lang):
 
 
 # ============================================================
+# TÜRKÇE LOCALE-DUYARLI YARDIMCI FONKSİYONLAR
+# ============================================================
+# Python'ın varsayılan sorted()/str.upper()/str.capitalize() metodları İngilizce
+# (Unicode varsayılan) kurallarını izler ve Türkçe'ye özgü harfleri (Ç, Ğ, İ, Ö,
+# Ş, Ü, ı) YANLIŞ işler:
+#   - sorted(): Ç/Ğ/İ/Ö/Ş/Ü harfleri Unicode kod noktası bakımından Z'den SONRA
+#     geldiği için (örn. 'İ' = U+0130), "İstanbul", "Şanlıurfa", "Çanakkale" gibi
+#     iller alfabetik listenin ortasında değil, en sonunda görünür.
+#   - 'i'.capitalize(): Türkçe'de doğrusu noktalı 'İ' iken Python 'I' (noktasız)
+#     üretir — örn. "il" kelimesi "Il" olur, doğrusu "İl" olmalıdır.
+_TR_ALPHABET = "AaBbCcÇçDdEeFfGgĞğHhIıİiJjKkLlMmNnOoÖöPpRrSsŞşTtUuÜüVvYyZz"
+_TR_ORDER = {ch: i for i, ch in enumerate(_TR_ALPHABET)}
+
+
+def turkce_anahtar(s: str):
+    """Doğru Türkçe alfabetik sıralama için sorted(..., key=turkce_anahtar) ile kullanılır."""
+    return [_TR_ORDER.get(ch, 1000 + ord(ch)) for ch in s]
+
+
+def turkce_buyuk_harf(s: str) -> str:
+    """str.capitalize()'ın Türkçe'ye duyarlı hali — 'i' harfini doğru şekilde
+    noktalı 'İ' harfine, 'ı' harfini 'I' harfine çevirir."""
+    if not s:
+        return s
+    ilk_harf_esleme = {"i": "İ", "ı": "I"}
+    ilk = ilk_harf_esleme.get(s[0], s[0].upper())
+    return ilk + s[1:]
+
+
+def baslik_harfi(s: str, lang: str) -> str:
+    """Dil moduna göre doğru büyük harfe çevirme: Türkçe için Türkçe kurallarını,
+    İngilizce için standart .capitalize()'ı kullanır."""
+    return turkce_buyuk_harf(s) if lang == "tr" else s.capitalize()
+
+
+# ============================================================
 # VERİ YÜKLEME / DATA LOADING
 # ============================================================
 @st.cache_data
@@ -412,20 +448,27 @@ st.title(T["title"])
 st.caption(T["warning"])
 
 st.sidebar.header(T["filters"])
-hastalik_listesi = sorted(df["hastalik_grubu"].unique())
-hastalik_display = {disease_label(h, lang): h for h in hastalik_listesi}
+hastalik_ham = list(df["hastalik_grubu"].unique())
+hastalik_display = {disease_label(h, lang): h for h in hastalik_ham}
+# Sıralama dile göre yapılır: Türkçe etiketler Türkçe alfabetik sırayla (turkce_anahtar),
+# İngilizce etiketler standart İngilizce alfabetik sırayla (sorted()) sıralanır — aksi
+# halde İngilizce mod bile Türkçe harf sırasını (yanlış şekilde) miras alır.
+hastalik_anahtarlar = sorted(hastalik_display.keys(), key=turkce_anahtar) if lang == "tr" \
+    else sorted(hastalik_display.keys())
 # key dile bağlı: dil değişince seçenek etiketleri değiştiği için widget'ın
 # eski dildeki seçili değeri yeni seçeneklerle eşleşmeyebilir — bu yüzden
 # dil değiştiğinde widget'ı sıfırdan oluşturuyoruz (aksi halde boş/hatalı görünür)
 secili_hastalik_disp = st.sidebar.selectbox(
-    T["disease_group"], list(hastalik_display.keys()),
-    index=list(hastalik_display.keys()).index(disease_label("ÜSYE", lang))
+    T["disease_group"], hastalik_anahtarlar,
+    index=hastalik_anahtarlar.index(disease_label("ÜSYE", lang))
     if disease_label("ÜSYE", lang) in hastalik_display else 0,
     key=f"disease_select_{lang}",
 )
 secili_hastalik = hastalik_display[secili_hastalik_disp]
 
-il_listesi = sorted(df["il"].unique())
+# İl isimleri her zaman Türkçe kalır (çevrilmez), bu yüzden dilden bağımsız
+# olarak her zaman doğru Türkçe alfabetik sırayla (turkce_anahtar) sıralanır.
+il_listesi = sorted(df["il"].unique(), key=turkce_anahtar)
 secili_il = st.sidebar.selectbox(T["select_province"], il_listesi,
                                    index=il_listesi.index("İstanbul"), key="province_select")
 
@@ -434,15 +477,17 @@ tarih_araligi = st.sidebar.date_input(T["date_range"], [tarih_min, tarih_max],
                                         min_value=tarih_min, max_value=tarih_max,
                                         key="date_range_select")
 
-bolge_listesi = sorted(df["bolge"].unique())
-bolge_display_map = {region_label(b, lang): b for b in bolge_listesi}
-secili_bolge_disp = st.sidebar.multiselect(T["region_map"], list(bolge_display_map.keys()),
-                                             default=list(bolge_display_map.keys()),
+bolge_ham = list(df["bolge"].unique())
+bolge_display_map = {region_label(b, lang): b for b in bolge_ham}
+bolge_anahtarlar = sorted(bolge_display_map.keys(), key=turkce_anahtar) if lang == "tr" \
+    else sorted(bolge_display_map.keys())
+secili_bolge_disp = st.sidebar.multiselect(T["region_map"], bolge_anahtarlar,
+                                             default=bolge_anahtarlar,
                                              key=f"region_multiselect_{lang}")
 bolge_secim = [bolge_display_map[b] for b in secili_bolge_disp]
 # Kullanıcı tüm bölge seçimini kaldırırsa boş kalmasın diye tüm bölgelere geri dön
 if not bolge_secim:
-    bolge_secim = bolge_listesi
+    bolge_secim = bolge_ham
 
 df_h = df[df["hastalik_grubu"] == secili_hastalik]
 il_df = df_h[df_h["il"] == secili_il].copy()
@@ -582,11 +627,11 @@ with tab_ozet:
         anomaliler = z_df[z_df["z"] >= 2].sort_values("z", ascending=False).head(10)
         if len(anomaliler):
             anomali_goster = anomaliler[["il", "vaka_100bin", "z"]].rename(columns={
-                "il": T["province"].capitalize(),
-                "vaka_100bin": T["rate"].capitalize(),
+                "il": baslik_harfi(T["province"], lang),
+                "vaka_100bin": baslik_harfi(T["rate"], lang),
                 "z": T["anomaly_col"],
             }).copy()
-            anomali_goster[T["rate"].capitalize()] = anomali_goster[T["rate"].capitalize()].map(
+            anomali_goster[baslik_harfi(T["rate"], lang)] = anomali_goster[baslik_harfi(T["rate"], lang)].map(
                 lambda x: f"{x:.2f}")
             anomali_goster[T["anomaly_col"]] = anomali_goster[T["anomaly_col"]].map(lambda x: f"{x:.2f}")
             render_table(anomali_goster)
@@ -650,8 +695,8 @@ with tab_ozet:
         st.subheader(T["disease_profile"])
         st.caption(T["disease_profile_desc"])
         radar_data = df[df["il"] == secili_il].groupby("hastalik_grubu")["vaka_100bin"].mean()
-        radar_data = radar_data.reindex(hastalik_listesi)
-        radar_labels = [disease_label(h, lang) for h in hastalik_listesi]
+        radar_data = radar_data.reindex(hastalik_ham)
+        radar_labels = [disease_label(h, lang) for h in hastalik_ham]
         fig_radar = go.Figure()
         fig_radar.add_trace(go.Scatterpolar(
             r=radar_data.values, theta=radar_labels, fill="toself",
@@ -705,11 +750,11 @@ with tab2:
 
     tahmini_vaka_label = "Tahmini vaka sayısı" if lang == "tr" else "Estimated case count"
     tablo_goster = tablo_df.rename(columns={
-        "il": T["province"].capitalize(),
-        "vaka_100bin": T["rate"].capitalize(),
+        "il": baslik_harfi(T["province"], lang),
+        "vaka_100bin": baslik_harfi(T["rate"], lang),
         "tahmini_vaka_sayisi": tahmini_vaka_label,
     }).copy()
-    tablo_goster[T["rate"].capitalize()] = tablo_goster[T["rate"].capitalize()].map(lambda x: f"{x:.2f}")
+    tablo_goster[baslik_harfi(T["rate"], lang)] = tablo_goster[baslik_harfi(T["rate"], lang)].map(lambda x: f"{x:.2f}")
     tablo_goster[tahmini_vaka_label] = tablo_goster[tahmini_vaka_label].map(lambda x: f"{x:,.0f}")
     render_table(tablo_goster)
 
@@ -867,11 +912,11 @@ with tab4:
     ornek_df["kaynak"] = ornek_df["kaynak"].map(kaynak_etiketleri).fillna(ornek_df["kaynak"])
 
     ornek_goster = ornek_df.rename(columns={
-        "il": T["province"].capitalize(),
-        "tarih": T["date"].capitalize(),
-        "vaka_100bin": T["rate"].capitalize(),
+        "il": baslik_harfi(T["province"], lang),
+        "tarih": baslik_harfi(T["date"], lang),
+        "vaka_100bin": baslik_harfi(T["rate"], lang),
         "kaynak": "Kaynak" if lang == "tr" else "Source",
     }).copy()
-    ornek_goster[T["date"].capitalize()] = ornek_goster[T["date"].capitalize()].dt.strftime("%d.%m.%Y")
-    ornek_goster[T["rate"].capitalize()] = ornek_goster[T["rate"].capitalize()].map(lambda x: f"{x:.2f}")
+    ornek_goster[baslik_harfi(T["date"], lang)] = ornek_goster[baslik_harfi(T["date"], lang)].dt.strftime("%d.%m.%Y")
+    ornek_goster[baslik_harfi(T["rate"], lang)] = ornek_goster[baslik_harfi(T["rate"], lang)].map(lambda x: f"{x:.2f}")
     render_table(ornek_goster)

@@ -29,17 +29,22 @@ real anchor points + known seasonality/wave patterns:
 | Disease group | Real anchor source |
 |---|---|
 | COVID-19 | Ministry of Health's press-released province-level incidence maps (Apr 1 2020, Sep 12 2020, Apr 24-30 2021, Jan 8-14 2022) |
-| Tuberculosis | TB Control Department's annual NATIONAL incidence (2020: 10.6, 2022: 11.0, 2024: 10.4 / 100k) — distributed to provinces by population/density |
+| Tuberculosis | TB Control Department's annual NATIONAL incidence (2020: 10.6, 2022: 11.0, 2024: 10.4 per 100,000) — distributed to provinces by population/density |
 | Influenza/ILI, URTI, Lower Respiratory Tract | WHO/ECDC's known Northern Hemisphere respiratory infection seasonality pattern (winter peak, summer trough) |
 
 This is a realistic methodological choice given the data constraint, and is
-transparently labeled in the `source` column of
-`data/raw/il_bazli_solunum_haftalik.csv` (`gercek_ceapa` / `proxy_kalibreli`
-/ `interpole` — i.e. real_anchor / calibrated_proxy / interpolated).
+transparently labeled in the `source` (`kaynak`) column of
+`data/raw/il_bazli_solunum_haftalik.csv`. Note that the tag values themselves
+are stored in Turkish regardless of the dashboard's display language:
+`gercek_capa` (= real anchor), `proxy_kalibreli` (= calibrated proxy),
+`interpole` (= interpolated).
 
 If real data becomes available (e.g. via an institutional request to
-TurkStat), it can be dropped into `data/raw/` using the same schema
-(`province, disease_group, date, cases_per_100k`) and the pipeline re-run.
+TurkStat), it can be substituted — the pipeline expects the actual Turkish
+column names (`il` = province, `hastalik_grubu` = disease group, `tarih` =
+date, `vaka_100bin` = cases per 100k, `kaynak` = source). A CSV with those
+exact column headers can be dropped into `data/raw/` and the pipeline
+re-run.
 
 ## 3. Folder Structure
 
@@ -55,6 +60,7 @@ turkiye-solunum-projesi/
 ├── models/                    # trained model + comparison table
 ├── streamlit_app/
 │   └── app.py                 # 4-tab interactive dashboard
+├── tests/                     # unit tests (pytest)
 ├── requirements.txt
 └── README.md
 ```
@@ -106,27 +112,68 @@ group).
 
 The sidebar's **disease group** and **province** filters work together:
 
+- **Summary:** Turkey-wide KPI cards (national average, 4-week change,
+  highest-risk province, provinces above the 90th percentile), a 26-week
+  national trend chart, a by-disease-group comparison, and a z-score-based
+  anomaly table (trailing 12-week window)
 - **Overview:** time series + rolling average + seasonality chart for the
-  selected province+disease, plus a comparison of all 5 disease groups
-  within the same province
+  selected province+disease, an optional multi-province comparison overlay,
+  plus a comparison of all 5 disease groups within the same province
 - **Geographic Distribution:** last week's province/region ranking for the
-  selected disease (bar chart + table)
+  selected disease (choropleth map + bar chart + table), plus animated
+  monthly ranking and geographic-change views
 - **Forecast:** LightGBM-based 1-8 week forward forecast for the selected
-  province+disease, plus a model comparison table by disease group
+  province+disease, a model comparison table by disease group, and a SHAP
+  feature-importance explainer
 - **Methodology:** transparent explanation of the data constraint and
   calibration method for each disease group
 
 `@st.cache_data` (data) and `@st.cache_resource` (model) are used for
 performance.
 
+### AI-Powered Quick Summary
+
+The **"🤖 Quick AI Summary"** button on the Summary tab generates a 2-3
+sentence natural-language summary of the current filtered view (national
+average, 4-week change, highest-risk province, number of provinces above
+threshold, anomaly count). The operation is always fast because only a
+handful of already-computed numeric metrics — not raw data — are sent to
+the model.
+
+- **If an API key is configured** (see below), a real LLM call is made to
+  Anthropic Claude.
+- **If no API key is configured, or the call fails**, the app automatically
+  and seamlessly falls back to a rule-based (template) summary. This means
+  the feature works even in a deployment with no AI API budget or key.
+
+**To add your own API key** (optional):
+1. Locally: copy `.streamlit/secrets.toml.example` to `.streamlit/secrets.toml`
+   and fill in your real key (this file is excluded from Git via
+   `.gitignore` and is never committed).
+2. On Streamlit Community Cloud: add the line
+   `ANTHROPIC_API_KEY = "sk-ant-..."` under your app's **Settings → Secrets**.
+
 ## 7. Future Work Ideas (can be added to a report as "future work")
 
-- Choropleth map (geopandas + GeoJSON) if real province-level data becomes available
 - An anomaly/early-warning tab using Isolation Forest
 - Clustering provinces with similar disease profiles using K-Means
 - Adding exogenous variables such as air pollution or temperature to the model
 
-## 8. Deployment (Streamlit Community Cloud)
+## 8. Tests
+
+```bash
+pip install pytest
+pytest tests/ -v
+```
+
+The `tests/` folder contains 22 unit tests for the core functions in
+`src/generate_data.py` and `src/clean_data.py` (seasonality, density
+multipliers, data cleaning, lag features, population merging, etc.). These
+tests once caught a real bug: `mevsim_carpani_ayarli()` could theoretically
+produce a negative multiplier at high seasonality-strength values — the
+tests caught it and it was fixed (see Section 11).
+
+## 9. Deployment (Streamlit Community Cloud)
 
 1. Push this folder to a GitHub repository (see Git steps below)
 2. Sign in with your GitHub account at https://share.streamlit.io
@@ -142,7 +189,7 @@ git remote add origin <YOUR_GITHUB_REPO_URL>
 git push -u origin main
 ```
 
-## 9. Limitations
+## 10. Limitations
 
 - Since the data is proxy/calibrated, absolute numbers should not be
   presented as real epidemiological figures — treat them as a methodology
@@ -153,17 +200,29 @@ git push -u origin main
 - This proxy data mimics "reported/registered case" style rates; the true
   epidemiological incidence of conditions like URTI, which are very common
   in the population but rarely reported to a health facility, could be
-  substantially higher (tens of thousands per 100k). The model reflects
+  substantially higher (tens of thousands per 100,000). The model reflects
   the surveillance/reporting scale, not total community incidence.
 
-## 10. Known Fix Log
+## 11. Known Fix Log
 
 The initial version had a unit-conversion bug in `src/generate_data.py`: the
-`taban` (baseline) value was defined as "annual cases per 100k" but was
+`taban` (baseline) value was defined as "annual cases per 100,000" but was
 divided by 12 instead of 52 when converting to a weekly rate (monthly
 scale), inflating rates by ~4x for all proxy weeks outside the real anchor
 points. The same bug also affected how tuberculosis's annual national value
-was anchored to a single week. Both were fixed to divide by 52, and the
-full pipeline (`generate_data.py → clean_data.py → train_models.py`) was
-re-run and re-validated — all numbers in this README reflect the corrected
-version.
+was anchored to a single week. Both were fixed to divide by 52.
+
+A second bug was later found by the unit test suite: `mevsim_carpani_ayarli()`
+could return a negative multiplier at high seasonality-strength values
+(never triggered by the disease groups currently in use, but unsafe for
+future additions) — fixed by clamping the result to a minimum of 0.
+
+A third, silent bug was found in the anomaly-detection logic on the Summary
+tab: the trailing window used to compute each province's baseline mean/std
+was accidentally using the *entire* multi-year history instead of the
+intended trailing 12 weeks, which could misclassify normal seasonal peaks
+as anomalies — fixed to properly window to the last 12 weeks.
+
+The full pipeline (`generate_data.py → clean_data.py → train_models.py`)
+was re-run and re-validated after each fix — all numbers in this README
+reflect the corrected version.

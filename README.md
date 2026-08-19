@@ -33,7 +33,7 @@ edilmiş bir **proxy veri seti** ile çalışır:
 
 Bu, veri kısıtı altında gerçekçi bir metodolojik tercihtir ve
 `data/raw/il_bazli_solunum_haftalik.csv` içindeki `kaynak` sütununda şeffaf
-şekilde etiketlenmiştir (`gercek_ceapa` / `proxy_kalibreli` / `interpole`).
+şekilde etiketlenmiştir (`gercek_capa` / `proxy_kalibreli` / `interpole`).
 
 Gerçek veri elde edilirse (örn. bir kurumdan / TÜİK özel talep yoluyla), aynı
 şema (`il, hastalik_grubu, tarih, vaka_100bin`) korunarak `data/raw/` altına
@@ -113,6 +113,27 @@ Sidebar'da **hastalık grubu** ve **il** filtreleri birlikte çalışır:
 
 Performans için `@st.cache_data` (veri) ve `@st.cache_resource` (model) kullanıldı.
 
+### Yapay Zeka Destekli Hızlı Özet
+
+Özet sekmesindeki **"🤖 Yapay Zeka ile Hızlı Özet"** butonu, o an filtrelenmiş
+durumun (ulusal ortalama, 4 haftalık değişim, en riskli il, eşik üstü il
+sayısı, anomali sayısı) 2-3 cümlelik doğal dil özetini üretir. İşlem her
+zaman hızlıdır çünkü modele ham veri değil, önceden hesaplanmış birkaç
+sayısal metrik gönderilir.
+
+- **API anahtarı tanımlıysa** (bkz. aşağı), Anthropic Claude ile gerçek bir
+  LLM çağrısı yapılır.
+- **API anahtarı tanımlı değilse veya çağrı başarısız olursa**, uygulama
+  KESİNTİYE UĞRAMADAN kural tabanlı (şablon) bir özete otomatik olarak döner.
+  Bu sayede özellik, API maliyeti/anahtarı olmayan bir deploy'da bile çalışır.
+
+**Kendi API anahtarınızı eklemek için** (opsiyonel):
+1. Yerelde: `.streamlit/secrets.toml.example` dosyasını `.streamlit/secrets.toml`
+   olarak kopyalayıp gerçek anahtarınızı girin (bu dosya `.gitignore` ile
+   Git'ten hariç tutulur, asla commit edilmez).
+2. Streamlit Community Cloud'da: uygulamanızın **Settings → Secrets**
+   kısmına `ANTHROPIC_API_KEY = "sk-ant-..."` satırını ekleyin.
+
 ## 7. Geliştirme Fikirleri (rapora "gelecek çalışmalar" olarak eklenebilir)
 
 - Gerçek il-bazlı veri temin edilirse choropleth harita (geopandas + GeoJSON)
@@ -150,7 +171,7 @@ git remote add origin <SENIN_GITHUB_REPO_URL>
 git push -u origin main
 ```
 
-## 9. Sınırlılıklar
+## 10. Sınırlılıklar
 
 - Veri proxy/kalibreli olduğu için mutlak sayılar gerçek epidemiyolojik
   değerler olarak sunulmamalı, yalnızca metodolojik gösterim amaçlı kabul
@@ -162,10 +183,10 @@ git push -u origin main
   hastalıkların gerçek epidemiyolojik insidansı (yüz binde on binler) çok
   daha yüksek olabilir. Model, sürveyans/bildirim ölçeğini yansıtır.
 
-## 10. Bilinen Düzeltme Kaydı
+## 11. Bilinen Düzeltme Kaydı
 
 İlk sürümde `src/generate_data.py` içinde bir birim dönüştürme hatası vardı:
-`taban` değeri "yıllık 100binde vaka" olarak tanımlanmıştı ancak haftalık
+`taban` değeri "yıllık 100.000'de vaka" olarak tanımlanmıştı ancak haftalık
 orana çevrilirken 52 yerine 12'ye bölünüyordu (aylık ölçek), bu da
 gerçek çapa noktaları dışındaki tüm proxy haftalarda oranları ~4 kat
 şişiriyordu. Aynı hata, tüberküloz için ulusal yıllık değerin tek bir haftaya

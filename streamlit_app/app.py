@@ -32,18 +32,18 @@ TEXTS = {
         "tab_forecast": "🔮 Tahmin",
         "tab_methodology": "📎 Metodoloji",
         "selected_province": "Seçili il",
-        "last_week_rate": "Son hafta 100binde vaka",
+        "last_week_rate": "Son hafta vaka oranı (100.000'de)",
         "change_4w": "4 haftalık değişim",
-        "weekly_rate_title": "haftalık 100binde vaka oranı",
+        "weekly_rate_title": "haftalık vaka oranı (100.000'de)",
         "rolling_avg": "4 haftalık hareketli ortalama",
         "seasonality": "Mevsimsellik",
         "disease_profile": "Hastalık Profili (Radar)",
         "disease_profile_desc": "Seçili ilde her hastalık grubunun mevsim ortalamasına göre kıyaslanması",
         "disease_compare": "— Tüm hastalık gruplarının karşılaştırması",
         "compare_title": "Hastalık grupları arası karşılaştırma (aynı il)",
-        "geo_subheader": "— Son hafta ({date}) il bazlı 100binde vaka",
+        "geo_subheader": "— Son hafta ({date}) il bazlı vaka oranı (100.000'de)",
         "geo_no_geojson": "GeoJSON dosyası bulunamadı, harita yerine bar grafik gösteriliyor.",
-        "top20_title": "En yüksek 20 il — 100binde vaka",
+        "top20_title": "En yüksek 20 il — vaka oranı (100.000'de)",
         "download_csv": "📥 Bu tabloyu CSV olarak indir",
         "race_chart_title": "Aylık İl Sıralaması Animasyonu — En Yüksek 15 İl",
         "race_chart_desc": "Play tuşuna basarak zaman içinde illerin sıralamasının nasıl değiştiğini izleyin",
@@ -77,7 +77,7 @@ bir açık veri/CSV/API olarak yayımlamamıştır. Ancak gerçek çapa noktalar
 - **COVID-19:** il-bazlı "100 binde vaka" basın açıklamaları (1 Nisan 2020,
   12 Eylül 2020, 24-30 Nisan 2021, 8-14 Ocak 2022)
 - **Tüberküloz:** Sağlık Bakanlığı Verem Savaşı Dairesi Başkanlığı'nın yıllık
-  ULUSAL insidans serisi (2020: 100binde 10.6 · 2022: 11.0 · 2024: 10.4) —
+  ULUSAL insidans serisi (2020: 100.000'de 10.6 · 2022: 11.0 · 2024: 10.4) —
   hsgm.saglik.gov.tr Verem Savaşı Raporları
 - **Grip/ÜSYE/Alt solunum yolu:** WHO/ECDC'nin bilinen Kuzey Yarımküre solunum
   yolu enfeksiyonu mevsimsellik paterni (kış artışı, yaz düşüşü) referans alındı
@@ -89,20 +89,20 @@ bir açık veri/CSV/API olarak yayımlamamıştır. Ancak gerçek çapa noktalar
 3. Her hastalık grubu için ayrı mevsimsellik gücü ve il-yoğunluk hassasiyeti
    katsayısı tanımlandı (örn. ÜSYE her ilde yaygındır → düşük hassasiyet;
    COVID-19 kalabalık illerde daha belirgin yayılmıştır → yüksek hassasiyet).
-4. Üretilen veri `kaynak` sütununda `gercek_ceapa` / `proxy_kalibreli` /
+4. Üretilen veri `kaynak` sütununda `gercek_capa` / `proxy_kalibreli` /
    `interpole` olarak etiketlenmiştir — şeffaflık için.
 
-**Gerçek veriyle değiştirme:** Aynı şema (`il, tarih, vaka_100bin`) ile
+**Gerçek veriyle değiştirme:** Aynı şema (`il, hastalik_grubu, tarih, vaka_100bin, kaynak`) ile
 `data/raw/` altına CSV eklenip `src/clean_data.py` + `src/train_models.py`
 yeniden çalıştırılarak tüm pipeline gerçek veriyle yeniden üretilebilir.
 """,
-        "province": "il", "region": "bölge", "rate": "100binde vaka", "date": "tarih",
+        "province": "il", "region": "bölge", "rate": "100.000'de vaka", "date": "tarih",
         "season_order": ["Kış", "İlkbahar", "Yaz", "Sonbahar"],
         "tab_summary": "🎯 Özet",
         "summary_header": "Türkiye Geneli Durum Özeti",
         "summary_national_avg": "Ulusal ortalama (nüfus ağırlıklı)",
         "summary_trend_4w": "4 haftalık değişim",
-        "summary_top_province": "En yüksek il",
+        "summary_top_province": "En riskli il",
         "summary_above_threshold": "90. yüzdelik üstündeki il sayısı",
         "summary_trend_chart": "Son 26 hafta — ulusal ortalama trend",
         "summary_by_disease": "Hastalık grubu bazında son hafta karşılaştırması",
@@ -114,6 +114,12 @@ yeniden çalıştırılarak tüm pipeline gerçek veriyle yeniden üretilebilir.
         "compare_chart_title": "İl karşılaştırması",
         "anomaly_col": "Z-skoru",
         "of_100": "il / 81",
+        "ai_summary_header": "🤖 Yapay Zeka ile Hızlı Özet",
+        "ai_summary_button": "Özetle",
+        "ai_summary_spinner": "Özet oluşturuluyor...",
+        "ai_summary_badge_ai": "Claude tarafından oluşturuldu",
+        "ai_summary_badge_template": "Otomatik şablon özet (API anahtarı tanımlı değil)",
+        "ai_summary_error": "Yapay zeka özeti alınamadı, otomatik şablon özet gösteriliyor.",
     },
     "en": {
         "title": "🫁 Turkey Respiratory & Infectious Disease Surveillance Dashboard",
@@ -131,7 +137,7 @@ yeniden çalıştırılarak tüm pipeline gerçek veriyle yeniden üretilebilir.
         "tab_forecast": "🔮 Forecast",
         "tab_methodology": "📎 Methodology",
         "selected_province": "Selected province",
-        "last_week_rate": "Last week per-100k rate",
+        "last_week_rate": "Last week rate (per 100,000)",
         "change_4w": "4-week change",
         "weekly_rate_title": "weekly cases per 100,000",
         "rolling_avg": "4-week rolling average",
@@ -140,9 +146,9 @@ yeniden çalıştırılarak tüm pipeline gerçek veriyle yeniden üretilebilir.
         "disease_profile_desc": "Seasonal average comparison of every disease group for the selected province",
         "disease_compare": "— Comparison across all disease groups",
         "compare_title": "Comparison across disease groups (same province)",
-        "geo_subheader": "— Last week ({date}) cases per 100k by province",
+        "geo_subheader": "— Last week ({date}) cases per 100,000 by province",
         "geo_no_geojson": "GeoJSON file not found, showing a bar chart instead of the map.",
-        "top20_title": "Top 20 provinces — cases per 100k",
+        "top20_title": "Top 20 provinces — cases per 100,000",
         "download_csv": "📥 Download this table as CSV",
         "race_chart_title": "Monthly Province Ranking Animation — Top 15 Provinces",
         "race_chart_desc": "Press play to watch how the province ranking changes over time",
@@ -173,10 +179,10 @@ Tuberculosis (TB).
 
 **Data source & constraint:** Turkey's Ministry of Health has never published province-level
 case data as continuous open data/CSV/API. However, real anchor points exist:
-- **COVID-19:** province-level "cases per 100k" press releases (Apr 1 2020,
+- **COVID-19:** province-level "cases per 100,000" press releases (Apr 1 2020,
   Sep 12 2020, Apr 24-30 2021, Jan 8-14 2022)
 - **Tuberculosis:** TB Control Department's annual NATIONAL incidence series
-  (2020: 10.6 · 2022: 11.0 · 2024: 10.4 per 100k) — hsgm.saglik.gov.tr TB Reports
+  (2020: 10.6 · 2022: 11.0 · 2024: 10.4 per 100,000) — hsgm.saglik.gov.tr TB Reports
 - **Influenza/URTI/Lower respiratory:** WHO/ECDC's known Northern Hemisphere
   respiratory infection seasonality pattern (winter rise, summer trough)
 
@@ -187,20 +193,24 @@ case data as continuous open data/CSV/API. However, real anchor points exist:
 3. A separate seasonality strength and province-density sensitivity coefficient
    was defined for each disease group (e.g. URTI is common everywhere → low
    sensitivity; COVID-19 spread more visibly in dense provinces → high sensitivity).
-4. Generated data is tagged in the `source` column as `real_anchor` /
-   `calibrated_proxy` / `interpolated` — for transparency.
+4. Generated data is tagged in the `source` column with the (Turkish-language)
+   values `gercek_capa` (= real anchor), `proxy_kalibreli` (= calibrated proxy),
+   or `interpole` (= interpolated) — for transparency.
 
-**Substituting real data:** Using the same schema (`province, date, cases_per_100k`),
-a CSV can be added under `data/raw/` and the pipeline (`src/clean_data.py` +
-`src/train_models.py`) re-run to regenerate everything with real data.
+**Substituting real data:** The pipeline expects the actual Turkish column
+names (`il` = province, `hastalik_grubu` = disease group, `tarih` = date,
+`vaka_100bin` = cases per 100k, `kaynak` = source). A CSV with those exact
+column headers can be added under `data/raw/` and the pipeline
+(`src/clean_data.py` + `src/train_models.py`) re-run to regenerate
+everything with real data.
 """,
-        "province": "province", "region": "region", "rate": "cases per 100k", "date": "date",
+        "province": "province", "region": "region", "rate": "cases per 100,000", "date": "date",
         "season_order": ["Winter", "Spring", "Summer", "Autumn"],
         "tab_summary": "🎯 Summary",
         "summary_header": "Turkey-Wide Status Summary",
         "summary_national_avg": "National average (population-weighted)",
         "summary_trend_4w": "4-week change",
-        "summary_top_province": "Highest province",
+        "summary_top_province": "Highest-risk province",
         "summary_above_threshold": "Provinces above the 90th percentile",
         "summary_trend_chart": "Last 26 weeks — national average trend",
         "summary_by_disease": "Last-week comparison by disease group",
@@ -212,6 +222,12 @@ a CSV can be added under `data/raw/` and the pipeline (`src/clean_data.py` +
         "compare_chart_title": "Province comparison",
         "anomaly_col": "Z-score",
         "of_100": "provinces / 81",
+        "ai_summary_header": "🤖 Quick AI Summary",
+        "ai_summary_button": "Summarize",
+        "ai_summary_spinner": "Generating summary...",
+        "ai_summary_badge_ai": "Generated by Claude",
+        "ai_summary_badge_template": "Automatic template summary (no API key configured)",
+        "ai_summary_error": "Couldn't reach the AI summary service, showing an automatic template summary instead.",
     },
 }
 
@@ -296,6 +312,78 @@ def render_table(d: pd.DataFrame, align: str = "center"):
     """, unsafe_allow_html=True)
 
 
+def generate_ai_summary(stats: dict, lang: str) -> tuple[str, bool]:
+    """Hazır, önceden hesaplanmış özet istatistiklerinden (stats) kısa bir doğal dil
+    özeti üretir. İşlem her zaman ÇOK KISA sürer çünkü ham veri değil, sadece birkaç
+    sayısal özet metriği (ortalama, değişim, en riskli il, anomali sayısı) modele
+    gönderilir — bu da hem hızlı hem düşük maliyetli bir çağrı sağlar.
+
+    Streamlit Cloud'da 'Settings > Secrets' kısmına ANTHROPIC_API_KEY eklenirse
+    gerçek bir LLM (Claude) çağrısı yapılır. Anahtar tanımlı değilse veya çağrı
+    başarısız olursa, uygulama KESİNTİYE UĞRAMADAN otomatik/şablon tabanlı bir
+    özete döner — böylece deploy ortamında API anahtarı olmasa bile özellik çalışır.
+
+    Döndürür: (özet_metni, yapay_zeka_mi_kullanildi: bool)
+    """
+    sablon = _template_summary(stats, lang)
+
+    try:
+        api_key = st.secrets.get("ANTHROPIC_API_KEY")
+    except Exception:
+        api_key = None
+    if not api_key:
+        return sablon, False
+
+    try:
+        import anthropic
+        client = anthropic.Anthropic(api_key=api_key)
+        if lang == "tr":
+            prompt = (
+                "Aşağıdaki sağlık sürveyans özet istatistiklerini, teknik olmayan bir "
+                "okuyucu için 2-3 cümlelik akıcı bir Türkçe özete çevir. Sayıları aynen "
+                "kullan, uydurma yorum ekleme:\n" + str(stats)
+            )
+        else:
+            prompt = (
+                "Turn the following health-surveillance summary statistics into a fluent "
+                "2-3 sentence English summary for a non-technical reader. Use the numbers "
+                "exactly as given, don't invent extra claims:\n" + str(stats)
+            )
+        resp = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=220,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        metin = resp.content[0].text.strip()
+        return (metin if metin else sablon), bool(metin)
+    except Exception:
+        return sablon, False
+
+
+def _template_summary(stats: dict, lang: str) -> str:
+    """API anahtarı yokken veya çağrı başarısız olduğunda kullanılan, tamamen yerel
+    (network gerektirmeyen) kural tabanlı özet — deterministik, ücretsiz, her zaman çalışır."""
+    yon_tr = "arttı" if stats["degisim"] >= 0 else "azaldı"
+    yon_en = "increased" if stats["degisim"] >= 0 else "decreased"
+    if lang == "tr":
+        return (
+            f"**{stats['hastalik']}** için Türkiye genelinde nüfus ağırlıklı ortalama şu anda "
+            f"100.000'de **{stats['ortalama']:.2f}** vaka ve son 4 haftada **{yon_tr}** "
+            f"(değişim: {stats['degisim']:+.2f}). En yüksek oran **{stats['en_yuksek_il']}** "
+            f"ilinde ({stats['en_yuksek_deger']:.2f}) görülüyor. Bu hafta 90. yüzdelik eşiğin "
+            f"üzerinde **{stats['esik_ustu']} il** var ve **{stats['anomali_sayisi']} ilde** "
+            f"istatistiksel olarak anlamlı bir anormal artış tespit edildi."
+        )
+    return (
+        f"For **{stats['hastalik']}**, the Turkey-wide population-weighted average is currently "
+        f"**{stats['ortalama']:.2f}** cases per 100,000 and has **{yon_en}** over the last 4 weeks "
+        f"(change: {stats['degisim']:+.2f}). The highest rate is in **{stats['en_yuksek_il']}** "
+        f"({stats['en_yuksek_deger']:.2f}). **{stats['esik_ustu']} provinces** are currently above "
+        f"the 90th-percentile threshold, and **{stats['anomali_sayisi']} provinces** show a "
+        f"statistically significant abnormal spike this week."
+    )
+
+
 df = load_data()
 model, feats, kod_map = load_lgbm()
 grup_to_kod = {v: k for k, v in kod_map.items()}
@@ -371,7 +459,7 @@ df_h_bolge = df_h[df_h["bolge"].isin(bolge_secim)]
 en_riskli_baslik = "En riskli il (bu hafta)" if lang == "tr" else "Highest-risk province (this week)"
 if len(df_h_bolge):
     en_riskli = df_h_bolge[df_h_bolge["tarih"] == son_tarih_genel].nlargest(1, "vaka_100bin").iloc[0]
-    rate_label = "100binde vaka" if lang == "tr" else "cases per 100k"
+    rate_label = "100.000'de vaka" if lang == "tr" else "cases per 100,000"
     st.sidebar.metric(en_riskli_baslik, en_riskli["il"])
     st.sidebar.caption(f"{rate_label}: **{en_riskli['vaka_100bin']:.2f}**")
     ipucu = ("ℹ️ Seçili *hastalık grubu* ve *bölge* filtresine göre hesaplanır; "
@@ -383,9 +471,9 @@ if len(df_h_bolge):
 else:
     st.sidebar.metric(en_riskli_baslik, "—")
 
-esik_baslik = "Uyarı eşiği (100binde vaka)" if lang == "tr" else "Alert threshold (per 100k)"
+esik_baslik = "Uyarı eşiği (100.000'de vaka)" if lang == "tr" else "Alert threshold (per 100,000)"
 # key hastalık grubuna bağlı: her hastalık grubunun değer aralığı çok farklı
-# (COVID onlarca, ÜSYE binlerce olabilir) — aynı key kullanılırsa slider eski
+# (COVID binlere, ÜSYE tek haneli sayılara çıkabilir) — aynı key kullanılırsa slider eski
 # hastalığın aralığında/değerinde donuk kalır, bu yüzden grup değişince widget
 # sıfırdan oluşturulup o grubun doğru varsayılan eşiğiyle (90. yüzdelik) başlar
 esik_max = float(df_h["vaka_100bin"].max())
@@ -484,8 +572,9 @@ with tab_ozet:
         st.caption(T["summary_anomalies_desc"])
         # Z-skoru: son 12 haftalık il-bazlı ortalama/std'ye göre bu haftanın sapması
         son_tarih_h = df_h["tarih"].max()
-        gecmis_12h = df_h[df_h["tarih"] < son_tarih_h].groupby("il")["vaka_100bin"].agg(
-            ort="mean", std="std").reset_index()
+        pencere_baslangic = son_tarih_h - pd.Timedelta(weeks=12)
+        gecmis_12h = df_h[(df_h["tarih"] < son_tarih_h) & (df_h["tarih"] >= pencere_baslangic)] \
+            .groupby("il")["vaka_100bin"].agg(ort="mean", std="std").reset_index()
         bu_hafta = df_h[df_h["tarih"] == son_tarih_h][["il", "vaka_100bin"]]
         z_df = bu_hafta.merge(gecmis_12h, on="il", how="left")
         z_df["std"] = z_df["std"].replace(0, np.nan)
@@ -503,6 +592,24 @@ with tab_ozet:
             render_table(anomali_goster)
         else:
             st.info(T["summary_no_anomaly"])
+
+    st.divider()
+    st.subheader(T["ai_summary_header"])
+    if st.button("🤖 " + T["ai_summary_button"], key="ai_summary_btn"):
+        with st.spinner(T["ai_summary_spinner"]):
+            stats = {
+                "hastalik": secili_hastalik_disp,
+                "ortalama": float(son_deger),
+                "degisim": float(degisim_ulusal),
+                "en_yuksek_il": en_yuksek_il_row["il"],
+                "en_yuksek_deger": float(en_yuksek_il_row["vaka_100bin"]),
+                "esik_ustu": int(esik_ustu_sayi),
+                "anomali_sayisi": int(len(anomaliler)),
+            }
+            ozet_metni, yapay_zeka_mi = generate_ai_summary(stats, lang)
+        st.markdown(ozet_metni)
+        rozet = T["ai_summary_badge_ai"] if yapay_zeka_mi else T["ai_summary_badge_template"]
+        st.caption(f"ℹ️ {rozet}")
 
 
     c1, c2, c3 = st.columns(3)
@@ -753,7 +860,7 @@ with tab4:
     ornek_df.index = ornek_df.index + 1
 
     kaynak_etiketleri = {
-        "gercek_ceapa": "Gerçek çapa" if lang == "tr" else "Real anchor",
+        "gercek_capa": "Gerçek çapa" if lang == "tr" else "Real anchor",
         "proxy_kalibreli": "Kalibreli proxy" if lang == "tr" else "Calibrated proxy",
         "interpole": "İnterpole" if lang == "tr" else "Interpolated",
     }
